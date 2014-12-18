@@ -68,22 +68,23 @@ void AtomSet::dump()
 ///////////////////////////////////////////////////////////
 //the implementation for formulas
 ///////////////////////////////////////////////////////////
+Formula::Formula()
+{
+  weight = 0;
+  level = 0;
+}
 
 Formulas::Formulas()
 {
-    formula_cnf f;
+    Formula f;
+    f.st = "_empty_formula_";
     mf.insert ( pair<string, dlint> ( "_empty_formula_", 0 ) );
-    stvec.push_back ( "_empty_formula_" );
-    cnf.push_back ( f );
-    neg_cnf.push_back ( f );
-    con.push_back(false);
+    vf.push_back ( f );
     num = 0;
 
+    f.st = "_false";
     mf.insert ( pair<string, dlint> ( "_false", 1 ) );
-    stvec.push_back ( "_false" );
-    cnf.push_back ( f );
-    neg_cnf.push_back ( f );
-    con.push_back(false);
+    vf.push_back(f);
     num = 1;
 }
 
@@ -92,28 +93,9 @@ dlint Formulas::size()
     return num;
 }
 
-string Formulas::get_string ( dlint i )
+Formula & Formulas::get_formula( dlint i )
 {
-    return stvec[i];
-}
-
-formula_cnf & Formulas::get_cnf ( dlint i, bool neg )
-{
-    if ( !neg ) {
-        return ( cnf[i] );
-    } else {
-        return ( neg_cnf[i] );
-    }
-}
-
-bool Formulas::is_conclusion ( dlint i )
-{
-    return con[i];
-}
-
-void Formulas::set_conclusion ( dlint i )
-{
-    con[i] = true;
+    return vf[i];
 }
 
 dlint Formulas::get_index ( string s )
@@ -125,24 +107,25 @@ dlint Formulas::get_index ( string s )
     if ( it != mf.end() ) {
         i = it->second;
     } else {
-        formula_cnf f;
+        Formula f;
+        f.st = s;
         mf.insert ( pair<string, dlint> ( s, ++num ) );
-        stvec.push_back ( s );
-        cnf.push_back ( f );
-        neg_cnf.push_back ( f );
+        vf.push_back ( f );
         i = num;
     }
 
     return i;
 }
 
+
 void Formulas::dump()
 {
     cout << "Formulas (" << num << ")" << endl;
     for ( dlint i = 1; i <= num; i++ ) {
-        cout << i<< "* " << get_index ( stvec[i] ) << " " << stvec[i] << endl;
+        cout << i<< "* " << get_index ( vf[i].st ) << " " << vf[i].st
+          << " [" << vf[i].weight << " @ " << vf[i].level << "]" << endl;
         cout << "  cnf: ";
-        for ( vector<clause_cnf>::iterator it = cnf[i].begin(); it < cnf[i].end(); it ++ ) {
+        for ( vector<clause_cnf>::iterator it = vf[i].cnf.begin(); it < vf[i].cnf.end(); it ++ ) {
             for ( clause_cnf::iterator itc = it->begin(); itc < it->end(); itc++ ) {
                 cout << ( *itc ) << " ";
             }
@@ -150,7 +133,7 @@ void Formulas::dump()
         }
         cout << endl;
         cout << "  neg_cnf: ";
-        for ( vector<clause_cnf>::iterator it = neg_cnf[i].begin(); it < neg_cnf[i].end(); it ++ ) {
+        for ( vector<clause_cnf>::iterator it =vf[i].neg_cnf.begin(); it < vf[i].neg_cnf.end(); it ++ ) {
             for ( clause_cnf::iterator itc = it->begin(); itc < it->end(); itc++ ) {
                 cout << ( *itc ) << " ";
             }
@@ -238,4 +221,21 @@ void DLsolver::dump()
         }
         cout << ")" << endl;
     }
+    
+    cout << "model type: ";
+    switch (mt){
+      case MT_SINGLE:
+        cout << "single";
+        break;
+      case MT_MIN:
+        cout << "minimum";
+        break;
+      case MT_MAX:
+        cout << "maximum";
+        break;
+      case MT_ALL:
+        cout << "all";
+        break;
+    }
+    cout << endl;      
 }

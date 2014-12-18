@@ -16,24 +16,27 @@ ParseNode::ParseNode ( ParseType t )
 {
     type = t;
     ival = 0;
+    iweight = 0;
+    ilevel = 0;
     sval = "";
     next = NULL;
     for ( int i = 0; i < MAX_PARSE_CHILD; i++ ) {
         child[i] = NULL;
     }
 };
-
+/*
 ParseNode::ParseNode ( ParseType t, int i )
 {
     type = t;
     ival = i;
+    ival1 = 0;
     sval = "";
     next = NULL;
     for ( int i = 0; i < MAX_PARSE_CHILD; i++ ) {
         child[i] = NULL;
     }
 };
-
+*/
 ParseNode::~ParseNode()
 {
     if ( next ) {
@@ -54,7 +57,7 @@ void ParseNode::add_bktheory()
     dlint i;
     clause_cnf c;
     i = gformula.get_index ( this->sval );
-    formula_cnf &cnf = gformula.get_cnf ( i, false );
+    formula_cnf &cnf = gformula.get_formula ( i ).cnf;
     if ( cnf.empty() ) {
         formula_to_cnf ( this, cnf, false, c );
     }
@@ -78,7 +81,7 @@ void ParseNode::add_default()
     while ( p ) {
         c.clear();
         i = gformula.get_index ( p->child[0]->sval );
-        formula_cnf &cnf = gformula.get_cnf ( i, true );
+        formula_cnf &cnf = gformula.get_formula ( i ).neg_cnf;
         if ( cnf.empty() ) {
             formula_to_cnf ( p->child[0], cnf, true, c );
         }
@@ -96,7 +99,7 @@ void ParseNode::add_default()
             s = "~" + s;
         }
         i = gformula.get_index ( s );
-        formula_cnf &cnf = gformula.get_cnf ( i, true );
+        formula_cnf &cnf = gformula.get_formula ( i ).neg_cnf;
         if ( cnf.empty() ) {
             formula_to_cnf ( p->child[0], cnf, false, c );
         }
@@ -108,11 +111,16 @@ void ParseNode::add_default()
     while ( p ) {
         c.clear();
         i = gformula.get_index ( p->child[0]->sval );
-        gformula.set_conclusion(i);
-        formula_cnf &cnf = gformula.get_cnf ( i, false );
+        formula_cnf &cnf = gformula.get_formula ( i ).cnf;
         if ( cnf.empty() ) {
             formula_to_cnf ( p->child[0], cnf, false, c );
         }
+        formula_cnf &neg_cnf = gformula.get_formula ( i ).neg_cnf;
+        if ( neg_cnf.empty() ) {
+            formula_to_cnf ( p->child[0], neg_cnf, true, c );
+        }
+        gformula.get_formula ( i ).weight = p->child[0]->iweight;
+        gformula.get_formula ( i ).level = p->child[0]->ilevel;
         d.conclusions.push_back ( i );
         gdl.con.insert ( i );
         p = p->next;

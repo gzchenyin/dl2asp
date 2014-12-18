@@ -102,8 +102,8 @@ private:
 			else { dirty = 1; }
 		}
 		// note: only one literal of v shall be marked at a time
-		bool    marked(bool sign) const   { return (litMark & (1+sign)) != 0; }
-		void    mark(bool sign)           { litMark = (1+sign); }
+		bool    marked(bool sign) const   { return (litMark & (1+int(sign))) != 0; }
+		void    mark(bool sign)           { litMark = (1+int(sign)); }
 		void    unmark()                  { litMark = 0; }
 	};
 	struct LessOccCost {

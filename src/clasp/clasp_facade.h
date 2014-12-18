@@ -26,7 +26,7 @@
 #endif
 
 #if !defined(CLASP_VERSION)
-#define CLASP_VERSION "3.0.3"
+#define CLASP_VERSION "3.1.1"
 #endif
 #if !defined(CLASP_LEGAL)
 #define CLASP_LEGAL \
@@ -36,24 +36,27 @@
 "There is NO WARRANTY, to the extent permitted by law."
 #endif
 
+#include <clasp/program_builder.h>
+#include <clasp/logic_program.h>
+#include <clasp/enumerator.h>
 
 #if !defined(WITH_THREADS)
-//#error Invalid thread configuration - use WITH_THREADS=0 for single-threaded or WITH_THREADS=1 for multi-threaded version of libclasp!
-#define WITH_THREADS 0
+#error Invalid thread configuration - use WITH_THREADS=0 for single-threaded or WITH_THREADS=1 for multi-threaded version of libclasp!
 #endif
 
 #if WITH_THREADS
 #include <clasp/parallel_solve.h>
-namespace Clasp { typedef Clasp::mt::ParallelSolveOptions SolveOptions; }
+namespace Clasp { 
+	struct SolveOptions : Clasp::mt::ParallelSolveOptions, EnumOptions {};
+}
 #else
 #include <clasp/shared_context.h>
 #include <clasp/solve_algorithms.h>
-namespace Clasp { typedef Clasp::BasicSolveOptions SolveOptions; }
+namespace Clasp { 
+	struct SolveOptions : Clasp::BasicSolveOptions, EnumOptions {};
+}
 #endif
 
-#include <clasp/program_builder.h>
-#include <clasp/logic_program.h>
-#include <clasp/enumerator.h>
 /*!
  * \file 
  * This file provides a facade around the clasp library. 
@@ -75,14 +78,17 @@ public:
 	// Base interface
 	void         prepare(SharedContext&);
 	void         reset();
+	//! Adds an unfounded set checker to the given solver if necessary.
+	/*!
+	 * If asp.suppMod is false and the problem in s is a non-tight asp-problem, 
+	 * the function adds an unfounded set checker to s.
+	 */
+	bool         addPost(Solver& s) const;
 	// own interface
 	UserConfig*  testerConfig() const { return tester_; } 
 	UserConfig*  addTesterConfig();
-	void         setSolvers(uint32 n);
-	
-	SolveOptions solve;    /*!< Options for solve algorithm.        */
-	EnumOptions  enumerate;/*!< Options for enumerator.             */
-	AspOptions   asp;      /*!< Options for asp preprocessing.      */
+	SolveOptions solve; /*!< Options for solve algorithm and enumerator. */
+	AspOptions   asp;   /*!< Options for asp preprocessing.      */
 private:
 	ClaspConfig(const ClaspConfig&);
 	ClaspConfig& operator=(const ClaspConfig&);
@@ -144,13 +150,13 @@ public:
 		bool                 sat()          const { return result.sat();   }
 		bool                 unsat()        const { return result.unsat(); }
 		bool                 complete()     const { return result.exhausted(); }
-		bool                 optimum()      const;
-		uint64               optimal()      const; 
-		bool                 optimize()     const;
-		const SharedMinData* costs()        const;
 		const char*          consequences() const;
-		int                  stats()        const;
+		bool                 optimize()     const;
 		const Model*         model()        const;
+		const SumVec*        costs()        const { return model() ? model()->costs : 0; }
+		bool                 optimum()      const { return costs() && (complete() || model()->opt); }
+		uint64               optimal()      const;
+		int                  stats()        const;
 		const ClaspFacade* facade;    /**< Facade object of this run.          */
 		double             totalTime; /**< Total wall clock time.              */
 		double             cpuTime;   /**< Total cpu time.                     */
@@ -179,18 +185,22 @@ public:
 	 * \name Start functions
 	 * Functions for defining a problem. 
 	 * Calling one of the start functions discards any previous problem.
-	 * The allowUpdate parameter determines whether or not program updates
-	 * are allowed once the problem is initially defined.
 	 */
 	//@{
 	//! Starts definition of an ASP-problem.
-	Asp::LogicProgram& startAsp(ClaspConfig& config, bool allowUpdate = false);
+	Asp::LogicProgram& startAsp(ClaspConfig& config, bool enableUpdates = false);
 	//! Starts definition of a SAT-problem.
-	SatBuilder&        startSat(ClaspConfig& config, bool allowUpdate = false);
+	SatBuilder&        startSat(ClaspConfig& config);
 	//! Starts definition of a PB-problem.
-	PBBuilder&         startPB(ClaspConfig& config , bool allowUpdate = false);
+	PBBuilder&         startPB(ClaspConfig& config);
 	//! Starts definition of a problem of type t.
-	ProgramBuilder&    start(ClaspConfig& config, ProblemType t, bool allowUpdate = false);
+	ProgramBuilder&    start(ClaspConfig& config, ProblemType t);
+	//! Enables support for incremental program updates if supported by the program.
+	/*!
+	 * \pre program() != 0 and program was not yet prepared.
+	 * \return true if program updates are supported. Otherwise, false.
+	 */
+	bool               enableProgramUpdates();
 	
 	enum EnumMode { enum_volatile, enum_static };
 	//! Finishes the definition of a problem and prepares it for solving.
@@ -208,7 +218,7 @@ public:
 	void               assume(const LitVec& ext);
 	//! Starts update of the active problem.
 	/*!
-	 * \pre start() was called with allowUpdate and solving() is false.
+	 * \pre solving() is false and program updates are enabled.
 	 */
 	ProgramBuilder&    update(bool updateConfig = false);
 	//@}
@@ -307,6 +317,7 @@ public:
 	Result             result()              const { return step_.result; }
 	//! Returns the active program or 0 if it was already released.
 	ProgramBuilder*    program()             const { return builder_.get(); }
+	Enumerator*        enumerator()          const;
 	
 	ExpectedQuantity   getStat(const char* path)const;
 	const char*        getKeys(const char* path)const;
@@ -318,7 +329,7 @@ private:
 	ExpectedQuantity getStatImpl(const char* path, bool keys)const;
 	ExpectedQuantity getStat(const SharedContext& ctx, const char* key, bool accu, const Range<uint32>& r) const;
 	void   init(ClaspConfig& cfg, bool discardProblem);
-	void   initBuilder(ProgramBuilder* in, bool incremental);
+	void   initBuilder(ProgramBuilder* in);
 	void   discardProblem();
 	void   startStep(uint32 num);
 	Result stopStep(int signal, bool complete);

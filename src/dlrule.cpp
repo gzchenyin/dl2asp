@@ -29,12 +29,18 @@ void dl_asp()
 
         add_rule ( h, p, n );
     }
+
     find_implication_rule();
+
+    if ( ( gdl.mt == MT_MAX ) || ( gdl.mt == MT_MIN ) ) {
+        find_opt_rule();
+    }
 }
 
 void find_implication_rule()
 {
-    find_mus ( 0 ); //find constraint
+    //find constraint
+    find_mus ( 0 );
     vector<dlint_set> cons;
     for ( vector<dlint_set>::iterator its = fmus.begin();
             its != fmus.end(); its++ ) {
@@ -42,6 +48,7 @@ void find_implication_rule()
         add_constraint ( *its );
     }
 
+    //find implication rules for prerequisite and justifications
     for ( dlint_set::iterator it = gdl.pre_just.begin();
             it != gdl.pre_just.end(); it++ ) {
         find_mus ( *it );
@@ -71,6 +78,39 @@ void find_implication_rule()
         }
     }
 
+    //if MAX/MIN, find implication rules for conclusions
+    if ( ( gdl.mt == MT_MIN ) || ( gdl.mt == MT_MAX ) ) {
+        for ( dlint_set::iterator it = gdl.con.begin();
+                it != gdl.con.end(); it++ ) {
+            find_mus ( *it );
+
+            dlint_set h;
+            dlint_set n;
+            h.insert ( *it );
+
+            for ( vector<dlint_set>::iterator its = fmus.begin();
+                    its != fmus.end(); its++ ) {
+
+                bool b = true;
+
+                if ( its->find ( *it ) != its->end() ) {
+                    b = false;
+                }
+
+                for ( vector<dlint_set>::iterator itc = cons.begin();
+                        b && ( itc != cons.end() ); itc++ )
+                    if ( *itc == *its ) {
+                        b = false;
+                    }
+
+                if ( b ) {
+                    add_rule ( h, *its, n );
+                }
+            }
+        }
+    }
+
+
 }
 
 void add_constraint ( dlint_set p )
@@ -95,6 +135,8 @@ void add_rule ( dlint_set h, dlint_set p, dlint_set n )
 
 void find_mus ( dlint f )
 {
+    //cout << "find mus for " << f << endl;
+
     PicoSAT *ps = picosat_init();
 
     //add bktheory
@@ -148,7 +190,12 @@ void find_mus ( dlint f )
 
 void encode_formula ( PicoSAT *ps, dlint f, bool neg, dlint g )
 {
-    formula_cnf c = gformula.get_cnf ( f, neg );
+    formula_cnf c;
+    if ( neg ) {
+        c = gformula.get_formula ( f ).neg_cnf;
+    } else {
+        c = gformula.get_formula ( f ).cnf;
+    }
 
     if ( c.empty() ) {
         cout << "empty cnf" << endl;
@@ -211,3 +258,72 @@ void mcs_to_mus()
 
 }
 
+void find_opt_rule()
+{
+    OptRule opt_r;
+
+    opt_r.level = 0;
+    list<OptRule>::iterator it = gdl.opt_rule.begin();
+    gdl.opt_rule.insert ( it, opt_r );
+
+    dlint sum_max = 1; //the sum of the weight for MT_MAX
+    if ( gdl.mt == MT_MAX ) {
+        for ( set<dlint>::iterator cit = gdl.con.begin();
+                cit != gdl.con.end(); cit++ ) {
+            dlint w = gformula.get_formula ( *cit ).weight;
+            if ( w >= 0 ) {
+                gdl.opt_atoms.insert ( *cit + gformula.size() ); // new atom for sum
+                sum_max += w;
+                Rule r;
+                r.head.insert ( *cit + gformula.size() );
+                r.neg.insert ( *cit );
+                gdl.rule.push_back ( r );
+            }
+        }
+    }
+
+    for ( set<dlint>::iterator cit = gdl.con.begin();
+            cit != gdl.con.end(); cit++ ) {
+        dlint l = gformula.get_formula ( *cit ).level;
+        dlint w = gformula.get_formula ( *cit ).weight;
+
+        if ( w >= 0 ) {
+            bool found = false;
+            bool next = true;
+            it = gdl.opt_rule.begin();
+
+            while ( next && ( !found ) && ( it != gdl.opt_rule.end() ) ) {
+                if ( it->level == l ) {
+                    found = true;
+                    next = false;
+                } else {
+                    if ( it->level > l ) {
+                        next = false;
+                    } else {
+                        it++;
+                    }
+                }
+            }
+
+            pair<dlint, dlint> p;
+            if ( gdl.mt == MT_MAX ) {
+                p.first = *cit + gformula.size();
+                //p.second = sum_max - w;
+                p.second = w;
+            } else {
+                p.first = *cit;
+                p.second = w;
+            }
+
+
+            if ( found ) {
+                it->watom.push_back ( p );
+            } else {
+                OptRule pr;
+                pr.level = l;
+                pr.watom.push_back ( p );
+                gdl.opt_rule.insert ( it, pr );
+            }
+        }
+    }
+}

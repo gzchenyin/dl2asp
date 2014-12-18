@@ -1,5 +1,6 @@
 %{
 #include <stdio.h>
+#include <string.h>
 #include "dlparser.h"
 #include "dlsolver.h"
   
@@ -18,7 +19,7 @@ int yyerror(char * s)
 
 %union {
   ParseNode *pn;
-  char * s;
+  char s[MAX_TOKEN_LENGTH];
 }
 
 %token <s> FULLSTOP
@@ -31,11 +32,16 @@ int yyerror(char * s)
 %token <s> TILDE
 %token <s> COMMA
 %token <s> IDENTITY
+%token <s> NUMBER
 %token <s> FCONT_STRING
+%token <s> LSQU
+%token <s> RSQU
+%token <s> AT
 
+%type <s> num_string
 %type <pn> dl statements statement default
   prerequisite justifications conclusions
-  formulas formula
+  formulas formula wformulas wformula
 
 %left AMPERSAND VERTICAL
 %right TILDE
@@ -95,7 +101,7 @@ justifications
     }
 ;
 conclusions
-  : formulas {
+  : wformulas {
     $$ = $1;
     }
   | {
@@ -118,6 +124,41 @@ formulas
   }
 ;
 
+wformulas
+  : formulas COMMA wformula {
+    $$ = new ParseNode(PT_FORMULAS);
+    $$->child[0] = $3;
+    $$->next = $1;
+    $$->sval = $1->sval + ", " + $3->sval;
+    }
+  | wformula{
+    $$ = new ParseNode(PT_FORMULAS);
+    $$->child[0] = $1;
+    $$->sval = $1->sval;
+    $$->next = NULL;
+  }
+;
+
+wformula
+  : formula {
+    $$ = $1;
+  }
+  | formula LSQU num_string RSQU{
+    $$ = $1;
+    $$->iweight = atoi($3);
+  }
+  | formula LSQU num_string AT num_string RSQU{
+    $$ = $1;
+    $$->iweight = atoi($3);
+    $$->ilevel = atoi($5);
+  }
+;
+
+num_string
+  : NUMBER {
+    strcpy($$, yytext);
+  }
+  
 formula
   : formula AMPERSAND formula {
     $$ = new ParseNode(PT_FORMULA);
@@ -144,7 +185,8 @@ formula
     $$->sval = $2->sval;
     }
   | IDENTITY  {
-    $$ = new ParseNode(PT_FORMULA, gatom.add_atom(yytext));
+    $$ = new ParseNode(PT_FORMULA);
+    $$->ival = gatom.add_atom(yytext);
     $$->sval = yytext;
     }
 ;

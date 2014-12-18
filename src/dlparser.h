@@ -9,6 +9,7 @@
 #define FOR_NEGATION -4
 
 #define MAX_PARSE_CHILD 3
+#define MAX_TOKEN_LENGTH 256
 enum ParseType {
     PT_DEFAULT,
     PT_FORMULA,
@@ -27,6 +28,8 @@ public:
     ParseNode * child[MAX_PARSE_CHILD];
     ParseNode * next;
     int ival;
+    int iweight;
+    int ilevel;
     string sval;
 
     void add_bktheory();

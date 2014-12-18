@@ -70,6 +70,7 @@ public:
 		project_use_heuristic = 2, /*!< Use heuristic when selecting a literal from a projection nogood. */
 		project_save_progress = 4, /*!< Enable progress saving after the first solution was found. */
 		project_enable_full   = 6, /*!< Enable projective solution enumeration with heuristic and progress saving. */
+		project_dom_lits      = 8, /*!< In strategy record, project only on true domain literals. */ 
 	};
 	/*! 
 	 * \param p The printer to use for outputting results.
@@ -83,19 +84,21 @@ public:
 	 * \params projection The set of ProjectOptions to be applied or 0 to disable projective enumeration.
 	 */
 	void     setStrategy(Strategy st = strategy_auto, uint32 projection = 0);
-	bool     projectionEnabled()const { return project_ != 0; }
+	bool     projectionEnabled()const { return project_.get() != 0; }
 	Strategy strategy()         const { return static_cast<Strategy>(options_ & 3u); }
 protected:
 	bool   supportsRestarts() const { return optimize() || strategy() == strategy_record; }
 	bool   supportsParallel() const { return !projectionEnabled() || strategy() != strategy_backtrack; }
-	ConPtr doInit(SharedContext& ctx, MinimizeConstraint* m, int numModels);
+	bool   supportsSplitting(const SharedContext& problem) const { 
+		return (strategy() == strategy_backtrack || (projectOpts() & project_dom_lits) == 0u) && Enumerator::supportsSplitting(problem); 
+	}
+	ConPtr doInit(SharedContext& ctx, SharedMinimizeData* m, int numModels);
 private:
 	enum { detect_strategy_flag = 4u, trivial_flag = 8u, strategy_opts_mask = 15u };
 	class ModelFinder;
 	class BacktrackFinder;
 	class RecordFinder;
-	class SolutionQueue;
-	typedef SolutionQueue* QPtr;
+	typedef SingleOwnerPtr<VarVec> VecPtr;
 	void    initProjection(SharedContext& ctx);
 	void    addProjectVar(SharedContext& ctx, Var v, bool mark);
 	uint32  numProjectionVars() const { return (uint32)project_->size(); }
@@ -103,9 +106,8 @@ private:
 	uint32  projectOpts()       const { return options_ >> 4; }
 	bool    detectStrategy()    const { return (options_ & detect_strategy_flag) == detect_strategy_flag; }
 	bool    trivial()           const { return (options_ & trivial_flag) == trivial_flag; }
-	QPtr    queue_;
-	VarVec* project_;
-	uint32  options_;
+	VecPtr project_;
+	uint32 options_;
 };
 
 }

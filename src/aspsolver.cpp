@@ -8,14 +8,22 @@ extern DLsolver gdl;
 
 void printModel ( const Clasp::SymbolTable& symTab, const Clasp::Model& model )
 {
-    std::cout << "Model " << model.num << ": \n";
-    // Print each named atom that is true w.r.t the current model.
-    for ( Clasp::SymbolTable::const_iterator it = symTab.begin(); it != symTab.end(); ++it ) {
-        //if ( model.isTrue ( it->second.lit ) && !it->second.name.empty() ) {
-        if ( model.isTrue ( it->second.lit ) ) {
+    if ( gdl.mt == MT_ALL ) {
+        std::cout << "Model " << model.num << ": \n";
+    } else {
+        gdl.last_model.clear();
+    }
 
-            if (gformula.is_conclusion(it->first))
-            std::cout << "(" << it->first << ") " << it->second.name.c_str() << endl;
+    for ( Clasp::SymbolTable::const_iterator it = symTab.begin(); it != symTab.end(); ++it ) {
+
+        if ( model.isTrue ( it->second.lit ) ) {
+            if ( gdl.con.find ( it->first ) != gdl.con.end() ) {
+                if ( gdl.mt == MT_ALL ) {
+                    std::cout << "(" << it->first << ") " << it->second.name.c_str() << endl;
+                } else {
+                    gdl.last_model.push_back ( it->first );
+                }
+            }
         }
     }
     std::cout << std::endl;
@@ -23,32 +31,23 @@ void printModel ( const Clasp::SymbolTable& symTab, const Clasp::Model& model )
 
 void solve_asp ( bool a )
 {
-    // LogicProgram provides the interface for
-    // defining logic programs.
-    // It also preprocesses the program and converts it
-    // to the internal solver format.
-    // See logic_program.h for details.
     Clasp::Asp::LogicProgram lp;
-
-    // Among other things, SharedContext maintains a Solver object
-    // which hosts the data and functions for CDNL answer set solving.
-    // SharedContext also contains the symbol table which stores the
-    // mapping between atoms of the logic program and the
-    // propositional literals in the solver.
-    // See shared_context.h for details.
     Clasp::SharedContext ctx;
 
-    // startProgram must be called once before we can add atoms/rules
     lp.startProgram ( ctx );
 
-    // Populate symbol table. Each atoms must have a unique id, the name is optional.
-    // The symbol table then maps the ids to the propositional
-    // literals in the solver.
-    for ( unsigned i = 1; i <= gformula.size(); i++ ) {
-        lp.setAtomName ( i, gformula.get_string ( i ).c_str() );
+    // define the atoms of the program
+    for ( unsigned i= 1; i <= gformula.size(); i++ ) {
+        lp.setAtomName ( i, gformula.get_formula ( i ).st.c_str() );
     }
-    // Define the rules of the program.
+    for ( set<dlint>::iterator it = gdl.opt_atoms.begin();
+            it != gdl.opt_atoms.end(); it++ ) {
+        string s = gformula.get_formula ( *it - gformula.size() ).st;
+        s = "_MAX_" + s;
+        lp.setAtomName ( *it, s.c_str() );
+    }
 
+    // define the rules of the program.
     for ( vector<Rule>::iterator it = gdl.rule.begin();
             it != gdl.rule.end(); it++ ) {
 
@@ -72,36 +71,53 @@ void solve_asp ( bool a )
         lp.endRule();
 
     }
+
+    //add max/min optimize if any
+    if ( ( gdl.mt == MT_MIN ) || ( gdl.mt == MT_MAX ) ) {
+        for ( list<OptRule>::iterator it = gdl.opt_rule.begin();
+                it != gdl.opt_rule.end(); it++ ) {
+            if ( !it->watom.empty() ) {
+                lp.startRule ( Clasp::Asp::OPTIMIZERULE );
+                for ( vector<pair<dlint, dlint> >::iterator itp = it->watom.begin();
+                        itp != it->watom.end(); itp++ ) {
+                    lp.addToBody ( itp->first, true, itp->second );
+                }
+                lp.endRule();
+            }
+        }
+    }
+
     lp.setCompute ( 1, 0 );
-
     lp.endProgram();
-
-
     //lp.write ( cout );
 
-    // Since we want to compute more than one
-    // answer set, we need an enumerator.
-    // See enumerator.h for details
     Clasp::ModelEnumerator enumerator;
-    enumerator.init ( ctx, 0 );
-
-    // We are done with problem setup.
-    // Prepare for solving.
-    ctx.endInit();
-    // BasicSolve implements a basic search for a model.
-    // It handles the various strategies like restarts, deletion, etc.
-    Clasp::BasicSolve solve ( *ctx.master() );
-    // Prepare the solver for enumeration.
-    enumerator.start ( solve.solver() );
-    while ( solve.solve() == Clasp::value_true ) {
-        // Make the enumerator aware of the new model and
-        // let it compute a new constraint and/or backtracking level.
-        if ( enumerator.commitModel ( solve.solver() ) ) {
-            printModel ( ctx.symbolTable(), enumerator.lastModel() );
-        }
-        // Integrate the model into the search and thereby prepare
-        // the solver for the search for the next model.
-        enumerator.update ( solve.solver() );
+    if ( ( gdl.mt == MT_MIN ) || ( gdl.mt == MT_MAX ) ) {
+        enumerator.init ( ctx, lp.getMinimizeConstraint()->share() );
+    } else {
+        enumerator.init ( ctx, 0 );
     }
-    std::cout << "No more models!" << std::endl;
+
+    int m = 0;
+    if ( ctx.endInit() ) {
+        Clasp::BasicSolve solve ( *ctx.master() );
+        enumerator.start ( solve.solver() );
+        while ( ( ( m == 0 ) || ( gdl.mt != MT_SINGLE ) ) && ( solve.solve() == Clasp::value_true ) ) {
+            if ( enumerator.commitModel ( solve.solver() ) ) {
+                printModel ( ctx.symbolTable(), enumerator.lastModel() );
+                m++;
+            }
+            enumerator.update ( solve.solver() );
+        }
+    }
+
+    if ( m == 0 ) {
+        std::cout << "No model!" << std::endl;
+    } else if ( gdl.mt != MT_ALL ) {
+        std::cout << "Model: \n";
+        for ( vector<dlint>::iterator it = gdl.last_model.begin();
+                it != gdl.last_model.end(); it++ ) {
+            std::cout << "(" << *it << ") " << gformula.get_formula ( *it ).st << endl;
+        }
+    }
 }

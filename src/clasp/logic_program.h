@@ -101,7 +101,7 @@ public:
 		AspOptions& noScc()                 { noSCC   = 1; return *this;}
 		AspOptions& noEq()                  { iters   = 0; return *this;}
 		AspOptions& disableGamma()          { noGamma = 1; return *this;}
-		AspOptions& ext(ExtendedRuleMode m) { erMode = m;  return *this;}
+		AspOptions& ext(ExtendedRuleMode m) { erMode  = m; return *this;}
 		AspOptions& supportedModels()       { suppMod = 1; noEq(); return noScc(); }
 		ExtendedRuleMode erMode;       /**< ExtendedRuleMode.                                        */
 		uint32           iters    : 26;/**< Number of iterations - 0 = disabled.                     */
@@ -229,8 +229,12 @@ public:
 	/*!
 	 * If the atom is defined in this or a previous step, the operation has no effect. 
 	 * \note If atomId is not yet known, an atom with the given id is implicitly created.
-	 * \note The second parameter defines the value that is assumed for the given atom while
-	 *       it is frozen. It shall be either value_false or value_true.
+	 * \note The second parameter defines the assumption that shall hold during solving, i.e.
+	 *       - True(atomId) , if value is value_true,
+	 *       - False(atomId), if value is value_false, or
+	 *       - no assumption, if value is value_free.
+	 *
+	 * \see ProgramBuilder::getAssumptions(LitVec&) const;
 	 */
 	LogicProgram& freeze(Var atomId, ValueRep value = value_false);
 
@@ -349,6 +353,8 @@ public:
 	uint32 numDisjunctions() const { return (uint32)disjunctions_.size(); }
 	//! Returns the id of the first atom of the current step.
 	Var    startAtom()       const { return incData_?incData_->startAtom:1; }
+	//! Returns whether a is an external atom, i.e. is frozen in this step.
+	bool   isExternal(Var a) const;
 	//! Returns the internal literal that is associated with the given atom.
 	/*!
 	 * \pre atomId is a known atom
@@ -429,12 +435,14 @@ private:
 	int  doType() const { return Problem_t::ASP; }
 	// ------------------------------------------------------------------------
 	// Program definition
+	bool     isNew(Var atomId) const { return atomId >= startAtom(); }
 	PrgAtom* resize(Var atomId);
+	PrgAtom* setExternal(Var atomId, ValueRep v);
 	void     addRuleImpl(RuleType t,    const VarVec& head, BodyInfo& body);
 	bool     handleNatively(RuleType t, const BodyInfo& i) const;
 	bool     transformNoAux(RuleType t, const BodyInfo& i) const;
 	void     transformExtended();
-	void     transformIntegrity(uint32 maxAux);
+	void     transformIntegrity(uint32 nAtoms, uint32 maxAux);
 	PrgBody* getBodyFor(BodyInfo& body, bool addDeps = true);
 	PrgDisj* getDisjFor(const VarVec& heads, uint32 headHash);
 	PrgBody* assignBodyFor(BodyInfo& body, EdgeType x, bool strongSimp);
@@ -453,8 +461,9 @@ private:
 		NodeType n = vec[id];
 		NodeType r;
 		Var root   = n->id();
-		for (r = vec[root]; r->eq(); r = vec[root]) {
-			// if n == r and r == r' -> n == r'
+		for (r = vec[root]; r->eq(); r = vec[root]) { 
+			// n == r and r == r' -> n == r'
+			assert(root != r->id());
 			n->setEq(root = r->id());
 		}
 		return root;
@@ -467,7 +476,6 @@ private:
 	void simplifyMinimize();
 	bool addConstraints();
 	// ------------------------------------------------------------------------
-	void writeBody(const BodyInfo& body, std::ostream&) const;
 	bool transform(const PrgBody& body, BodyInfo& out)  const;
 	void transform(const MinimizeRule&, BodyInfo& out)  const;
 	Var      getFalseId()      const { return 0; }
@@ -495,12 +503,12 @@ private:
 	struct Incremental  {
 		Incremental();
 		uint32  startAtom;// first atom of current iteration
-		uint32  startAux; // first aux atom of current iteration
 		uint32  startScc; // first valid scc number in this iteration
 		VarVec  frozen;   // list of frozen atoms
 		VarVec  update;   // list of atoms to be updated (freeze/unfreeze) in this step
-	}*             incData_;// additional state to handle incrementally defined programs 
-	AspOptions     opts_;   // preprocessing 
+	}*             incData_;     // additional state to handle incrementally defined programs 
+	AspOptions     opts_;        // preprocessing 
+	uint32         startAux_;    // first aux atom
 };
 } } // end namespace Asp
 #endif

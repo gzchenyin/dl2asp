@@ -4,12 +4,21 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <list>
+#include <utility>
 
 #include "tool.h"
 
 ///////////////////////////////////////////////////////////
 //the class for default logic solver
 ///////////////////////////////////////////////////////////
+
+enum ModelType {
+    MT_SINGLE = 0,
+    MT_ALL = 1,
+    MT_MIN = 2,
+    MT_MAX = 3
+};
 
 ///////////////////////////////////////////////////////////
 //the class for atoms in the default theory
@@ -35,26 +44,38 @@ public:
 ///////////////////////////////////////////////////////////
 //the class for formulas
 ///////////////////////////////////////////////////////////
+class Formula
+{
+public:
+  Formula();
+  string st;
+  formula_cnf cnf;
+  formula_cnf neg_cnf;
+  dlint weight;
+  dlint level;
+};
+
 class Formulas
 {
 private:
     dlint num;
     map<string, dlint> mf;
-    vector<string> stvec;
-    vector<formula_cnf> cnf;
-    vector<formula_cnf> neg_cnf;
-  vector<bool> con;
+    vector<Formula> vf;
 public:
     Formulas();
 
     dlint size();
-    string get_string ( dlint i );
-    formula_cnf & get_cnf ( dlint i, bool neg );
-    dlint get_index ( string s );
-
-    void set_conclusion(dlint i);
-    bool is_conclusion(dlint i);
+    Formula & get_formula(dlint i);
+    dlint get_index(string s);
     
+    //string get_string ( dlint i );
+    //formula_cnf & get_cnf ( dlint i, bool neg );
+    //dlint get_index ( string s );
+    //void set_weight ( dlint i, dlint w );
+    //dlint get_weight ( dlint i );
+    //void set_level ( dlint i, dlint w );
+    //dlint get_level ( dlint i );
+
     void dump();
 };
 
@@ -90,6 +111,13 @@ public:
     vector<dlint>  conclusions;
 };
 
+class OptRule
+{
+public:
+  dlint level;
+  vector<pair<dlint, dlint> > watom;
+};
+
 class DLsolver
 {
 public:
@@ -106,7 +134,14 @@ public:
     set<dlint> con;
 
     vector<Rule> rule;
+
+    string infile;
+    ModelType mt;
+    vector<dlint> last_model;
     
+    set<dlint> opt_atoms;
+    list<OptRule> opt_rule;
+
     void dump();
 };
 

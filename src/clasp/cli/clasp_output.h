@@ -31,6 +31,12 @@ void format(const Clasp::mt::MessageEvent& ev, char* out, uint32 outSize);
 #endif
 
 /*!
+ * \addtogroup cli
+ */
+//@{
+
+/*!
+ *
  * Interface for printing status and input format dependent information,
  * like models, optimization values, and summaries.
  */
@@ -94,6 +100,7 @@ private:
 	typedef const ClaspFacade::Summary* SumPtr ;
 	SumPtr    summary_ ; // summary of last step
 	ValueVec  vals_    ; // saved values from most recent model
+	SumVec    costs_   ; // saved costs from most recent model
 	Model     saved_   ; // most recent model
 	uint32    verbose_ ; // verbosity level
 	uint8     quiet_[3]; // quiet levels for models, optimize, calls
@@ -155,7 +162,7 @@ private:
 	void printString(const char* s, const char* sep);
 	void printKey(const char* k);
 	void printModel(const SymbolTable& sym, const Model& m, PrintLevel x);
-	void printCosts(const SharedMinimizeData& costs);
+	void printCosts(const SumVec& costs);
 	void startModel();
 	bool hasWitness() const { return !objStack_.empty() && *objStack_.rbegin() == '['; }
 	uint32 indent()   const { return static_cast<uint32>(objStack_.size() * 2); }
@@ -216,7 +223,7 @@ public:
 	virtual void startStep(const ClaspFacade&);
 	//! Prints a comment message.
 	void comment(uint32 v, const char* fmt, ...) const;
-private:
+protected:
 	virtual void printNames(const SymbolTable& sym, const Model& m);
 	virtual void visitProblemStats(const ProblemStats& stats, const Asp::LpStats* lp);
 	virtual void visitSolverStats(const Clasp::SolverStats& s, bool accu);
@@ -229,12 +236,15 @@ private:
 	virtual void visitThread(uint32 i, const SolverStats& s)  { startObject("Thread", i); StatsVisitor::visitThread(i, s); }
 	virtual void visitHccs(const SharedContext& ctx)         { startSection("Tester");   StatsVisitor::visitHccs(ctx);    }
 	virtual void visitHcc(uint32 i, const SharedContext& ctx){ startObject("HCC", i);    StatsVisitor::visitHcc(i, ctx);  }
-	int  printSep(CategoryKey c) const;
-	void printCosts(const SharedMinimizeData&) const;
-	void startSection(const char* n)     const;
-	void startObject(const char* n, uint32 i) const;
-	void setState(uint32 state, uint32 verb, const char* st);
-	void printSolveProgress(const Event& ev);
+	
+	const char* fieldSeparator() const;
+	int         printSep(CategoryKey c) const;
+	void        printCosts(const SumVec&) const;
+	void        startSection(const char* n)     const;
+	void        startObject(const char* n, uint32 i) const;
+	void        setState(uint32 state, uint32 verb, const char* st);
+	void        printSolveProgress(const Event& ev);
+private:
 	double             stTime_;// time on state enter
 	Clasp::atomic<int> ev_;    // last event type
 	int                width_; // output width
@@ -242,5 +252,7 @@ private:
 	uint32             state_; // active state
 	char               ifs_[2];// field separator
 };
+//@}
+
 }}
 #endif

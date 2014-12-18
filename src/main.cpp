@@ -14,20 +14,25 @@ int main ( int argc, char** argv )
     double cpu_time = CPUTIME;
 
     bool r = true;
-    yyin = fopen ( argv[1], "r" );
+    
+    handle_param(argc, argv);
+    
+    yyin = fopen ( gdl.infile.c_str(), "r" );
     if ( !yyin ) {
         r = false;
-        cout << "cannot open input file : " << argv[1] << endl;
+        cout << "cannot open input file : " << gdl.infile << endl;
     }
     if ( ! ( r && ( yyparse() == 0 ) ) ) {
         r = false;
-        cout << "parse file error : " << argv[1] << endl;
+        cout << "parse file error : " << gdl.infile << endl;
     }
 
     //gatom.dump();
     //gformula.dump();
 
     dl_asp();
+    //gdl.dump();
+    
     solve_asp ( true );
 
     //gdl.dump();

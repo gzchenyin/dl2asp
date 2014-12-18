@@ -84,6 +84,8 @@ public:
 		create_no_freeze = 8u, /**< Do not freeze variables in constraint. */
 		create_no_share  =16u, /**< Do not allow sharing of literals.      */
 		create_eq_bound  =32u, /**< Create equality instead of less-than constraint. */
+		create_only_btb  =64u, /**< Only create FFB_BTB constraint. */
+		create_only_bfb  =128u,/**< Only create FTB_BFB constraint. */
 	};
 	class CPair {
 	public:
@@ -165,7 +167,7 @@ private:
 		uint32  w  : 1;  // has weights?
 		Literal lits[0]; // Literals of constraint: ~B [Bw], l1 [w1], ..., ln-1 [Wn-1]
 	};
-	WeightConstraint(Solver& s, SharedContext* ctx, Literal W, const WeightLitsRep& , WL* out);
+	WeightConstraint(Solver& s, SharedContext* ctx, Literal W, const WeightLitsRep& , WL* out, uint32 act = 3u);
 	WeightConstraint(Solver& s, const WeightConstraint& other);
 	~WeightConstraint();
 	
@@ -199,9 +201,10 @@ private:
 	uint32   highestUndoLevel(Solver&) const;
 	void     setBpIndex(uint32 n);
 	WL*      lits_;        // literals of constraint
-	uint32   up_     : 29; // undo position; [undoStart(), up_] is the undo stack
+	uint32   up_     : 27; // undo position; [undoStart(), up_) is the undo stack
 	uint32   ownsLit_:  1; // owns lits_?
 	uint32   active_ :  2; // which of the two sub-constraints is currently unit?
+	uint32   watched_:  2; // which constraint is watched (3 both, 2 ignore, FTB_BFB, FFB_BTB)
 	weight_t bound_[2];    // FFB_BTB: (sumW-bound)+1 / FTB_BFB: bound
 	UndoInfo undo_[0];     // undo stack + seen flag for each literal
 };

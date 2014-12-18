@@ -24,4 +24,6 @@ typedef vector<dlint> clause_cnf;
 //a formula is a stored as a vector of clause
 typedef vector<clause_cnf> formula_cnf;
 
+void handle_param(int argc, char** argv);
+
 #endif

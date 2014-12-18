@@ -11,6 +11,7 @@ void dl_asp();
 void encode_formula ( PicoSAT *ps, dlint f, bool neg, dlint g );
 void find_implication_rule();
 void mcs_to_mus();
+void find_opt_rule();
 
 void add_constraint ( dlint_set p );
 void add_rule ( dlint_set h, dlint_set p, dlint_set n );

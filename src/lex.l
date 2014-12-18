@@ -4,12 +4,13 @@
 #include "parse.h"
 %}
 
-char	        [_0-9a-zA-Z]
-id		{char}+
+num	        [0-9][0-9]*
+id		[_a-zA-Z][_0-9a-zA-Z]*
 whitespace      [\n\t\r ]*
 
 %%
 {id} 		{return IDENTITY;}
+{num}           {return NUMBER;}
 {whitespace}    {/* skip whitespace */}
 "."		{return FULLSTOP;}
 "/"		{return SLASH;}
@@ -20,6 +21,9 @@ whitespace      [\n\t\r ]*
 "|"		{return VERTICAL;}
 "~"		{return TILDE;}
 ","		{return COMMA;}
+"["             {return LSQU;}
+"]"             {return RSQU;}
+"@"             {return AT;}
 %%
 
 int yywrap()
