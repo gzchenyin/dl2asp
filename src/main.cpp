@@ -37,7 +37,11 @@ int main ( int argc, char** argv )
 
     //gdl.dump();
 
-    cout << "total: " << CPUTIME - cpu_time << "s" << endl;
+    cout << endl;
+    cout << "time: " << CPUTIME - cpu_time << "s" << endl;
+    cout << "defaults: " << gdl.defaults.size() << endl;
+    cout << "asp rules(implication rules): " << gdl.rule.size() 
+      << "(" << gdl.imp_rule_num << ")" << endl; 
     return r;
 }
 

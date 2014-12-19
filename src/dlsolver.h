@@ -135,6 +135,9 @@ public:
 
     vector<Rule> rule;
 
+    long drule_num;
+    long imp_rule_num;
+    
     string infile;
     ModelType mt;
     vector<dlint> last_model;

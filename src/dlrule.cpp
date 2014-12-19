@@ -30,8 +30,12 @@ void dl_asp()
         add_rule ( h, p, n );
     }
 
+    gdl.drule_num = gdl.rule.size();
+    
     find_implication_rule();
 
+    gdl.imp_rule_num = gdl.rule.size() - gdl.drule_num;
+    
     if ( ( gdl.mt == MT_MAX ) || ( gdl.mt == MT_MIN ) ) {
         find_opt_rule();
     }
