@@ -31,6 +31,8 @@ int main ( int argc, char** argv )
     //gformula.dump();
 
     dl_asp();
+    
+    double trans_time = CPUTIME - cpu_time;
     //gdl.dump();
     
     solve_asp ( true );
@@ -38,7 +40,7 @@ int main ( int argc, char** argv )
     //gdl.dump();
 
     cout << endl;
-    cout << "time: " << CPUTIME - cpu_time << "s" << endl;
+    cout << "time: " << CPUTIME - cpu_time << "s(" << trans_time << "s)" << endl;
     cout << "defaults: " << gdl.defaults.size() << endl;
     cout << "asp rules(implication rules): " << gdl.rule.size() 
       << "(" << gdl.imp_rule_num << ")" << endl; 
