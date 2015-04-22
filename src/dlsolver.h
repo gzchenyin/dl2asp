@@ -14,10 +14,9 @@
 ///////////////////////////////////////////////////////////
 
 enum ModelType {
-    MT_SINGLE = 0,
-    MT_ALL = 1,
-    MT_MIN = 2,
-    MT_MAX = 3
+    MT_NONE = 0,
+    MT_MIN = 1,
+    MT_MAX = 2
 };
 
 ///////////////////////////////////////////////////////////
@@ -138,12 +137,18 @@ public:
     long drule_num;
     long imp_rule_num;
     
-    string infile;
-    ModelType mt;
-    vector<dlint> last_model;
-    
     set<dlint> opt_atoms;
     list<OptRule> opt_rule;
+    
+    //options
+    //output Logic-GK format
+    bool gk;
+    //input file name
+    string infile;
+    //optimization
+    ModelType mt;
+    //num of models
+    long mn;
 
     void dump();
 };

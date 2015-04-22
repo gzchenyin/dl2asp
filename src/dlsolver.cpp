@@ -160,7 +160,7 @@ void DLsolver::dump()
     cout << endl;
 
     cout << "Defaults (" << defaults.size() << ")" << endl;
-    for ( dlint i = 0; i < defaults.size(); i++ ) {
+    for ( dlint i = 0; i < (dlint)defaults.size(); i++ ) {
         DF d = defaults[i];
         cout << i << " " << d.sdl << endl;
         cout << "  (";
@@ -224,18 +224,16 @@ void DLsolver::dump()
     
     cout << "model type: ";
     switch (mt){
-      case MT_SINGLE:
-        cout << "single";
-        break;
       case MT_MIN:
         cout << "minimum";
         break;
       case MT_MAX:
         cout << "maximum";
         break;
-      case MT_ALL:
-        cout << "all";
+      case MT_NONE:
+        cout << "none";
         break;
     }
-    cout << endl;      
+    cout << ", ";      
+    cout << "num of models: " << mn << endl;
 }

@@ -34,6 +34,9 @@ public:
 
     void add_bktheory();
     void add_default();
+    
+    void dl_gk();
+    string formula_to_gk();
 
     void formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, clause_cnf c );
 };

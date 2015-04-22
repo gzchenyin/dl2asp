@@ -1,7 +1,0 @@
-b.
-(~c | d) | a.
-~(a & c) | ~e.
- : a / a.
- b : c / c.
- d | a : e /e.
- c & e : ~a, d | a / f.

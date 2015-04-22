@@ -4,7 +4,8 @@ PARSER = bison
 PICOSAT_INCLUDE = . 
 CLASP_INCLUDE = . 
 #CFLAGS = -DNEDEBUG -O  -Wno-deprecated
-CFLAGS = -Wall -I$(PICOSAT_INCLUDE) -I$(CLASP_INCLUDE) -pipe -fno-strict-aliasing -ggdb
+#CFLAGS = -Wall -Wno-deprecated -I$(PICOSAT_INCLUDE) -I$(CLASP_INCLUDE) -pipe -fno-strict-aliasing -ggdb
+CFLAGS = -Wno-deprecated -I$(PICOSAT_INCLUDE) -I$(CLASP_INCLUDE) -pipe -fno-strict-aliasing -ggdb
 
 #picosat
 PICOSAT_LIB = libpicosat.a

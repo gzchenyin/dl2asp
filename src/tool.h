@@ -10,7 +10,6 @@
 
 using namespace std;
 
-static struct rusage ruse;
 #define CPUTIME (getrusage(RUSAGE_SELF,&ruse),\
   ruse.ru_utime.tv_sec + ruse.ru_stime.tv_sec + \
   1e-6 * (ruse.ru_utime.tv_usec + ruse.ru_stime.tv_usec))

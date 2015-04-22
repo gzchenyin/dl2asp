@@ -176,7 +176,8 @@ void find_mus ( dlint f )
     fmcs.clear();
     fmus.clear();
 
-    int res = picosat_sat ( ps, -1 );
+    //int res = picosat_sat ( ps, -1 );
+    picosat_sat ( ps, -1 );
     const int *m, *p;
     int cid;
     while ( ( m = picosat_next_minimal_correcting_subset_of_assumptions ( ps ) ) ) {

@@ -6,6 +6,7 @@
   
 extern int yylex(void);
 extern char * yytext;
+extern DLsolver gdl;
 
 extern AtomSet gatom;
 
@@ -58,11 +59,17 @@ statements
 
 statement
   : formula  {
-    $1->add_bktheory();
+    if (gdl.gk)
+      $1->dl_gk();
+    else
+      $1->add_bktheory();
     delete $1;
     }
   | default  {
-    $1->add_default();
+    if (gdl.gk)
+      $1->dl_gk();
+    else
+      $1->add_default();
     delete $1;
     }
 ;

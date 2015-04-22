@@ -20,7 +20,8 @@ ParseNode::ParseNode ( ParseType t )
     ilevel = 0;
     sval = "";
     next = NULL;
-    for ( int i = 0; i < MAX_PARSE_CHILD; i++ ) {
+    for ( int i = 0; i < MAX_PARSE_CHILD; i++ )
+    {
         child[i] = NULL;
     }
 };
@@ -39,13 +40,16 @@ ParseNode::ParseNode ( ParseType t, int i )
 */
 ParseNode::~ParseNode()
 {
-    if ( next ) {
+    if ( next )
+    {
         delete next;
         next = NULL;
     }
 
-    for ( int i = 0; i < MAX_PARSE_CHILD; i++ ) {
-        if ( child[i] ) {
+    for ( int i = 0; i < MAX_PARSE_CHILD; i++ )
+    {
+        if ( child[i] )
+        {
             delete child[i];
             child[i] = NULL;
         }
@@ -58,7 +62,8 @@ void ParseNode::add_bktheory()
     clause_cnf c;
     i = gformula.get_index ( this->sval );
     formula_cnf &cnf = gformula.get_formula ( i ).cnf;
-    if ( cnf.empty() ) {
+    if ( cnf.empty() )
+    {
         formula_to_cnf ( this, cnf, false, c );
     }
 
@@ -67,7 +72,8 @@ void ParseNode::add_bktheory()
 
 void ParseNode::add_default()
 {
-    if ( type != PT_DEFAULT ) {
+    if ( type != PT_DEFAULT )
+    {
         return;
     }
 
@@ -78,11 +84,13 @@ void ParseNode::add_default()
     clause_cnf c;
 
     p = child[0];
-    while ( p ) {
+    while ( p )
+    {
         c.clear();
         i = gformula.get_index ( p->child[0]->sval );
         formula_cnf &cnf = gformula.get_formula ( i ).neg_cnf;
-        if ( cnf.empty() ) {
+        if ( cnf.empty() )
+        {
             formula_to_cnf ( p->child[0], cnf, true, c );
         }
         d.prerequisite.push_back ( i );
@@ -90,17 +98,22 @@ void ParseNode::add_default()
         p = p->next;
     }
     p = child[1];
-    while ( p ) {
+    while ( p )
+    {
         c.clear();
         string s = p->child[0]->sval;
-        if ( s.at ( 0 ) == '~' ) {
+        if ( s.at ( 0 ) == '~' )
+        {
             s = s.substr ( 1, s.size() );
-        } else {
+        }
+        else
+        {
             s = "~" + s;
         }
         i = gformula.get_index ( s );
         formula_cnf &cnf = gformula.get_formula ( i ).neg_cnf;
-        if ( cnf.empty() ) {
+        if ( cnf.empty() )
+        {
             formula_to_cnf ( p->child[0], cnf, false, c );
         }
         d.justifications.push_back ( i );
@@ -108,15 +121,18 @@ void ParseNode::add_default()
         p = p->next;
     }
     p = child[2];
-    while ( p ) {
+    while ( p )
+    {
         c.clear();
         i = gformula.get_index ( p->child[0]->sval );
         formula_cnf &cnf = gformula.get_formula ( i ).cnf;
-        if ( cnf.empty() ) {
+        if ( cnf.empty() )
+        {
             formula_to_cnf ( p->child[0], cnf, false, c );
         }
         formula_cnf &neg_cnf = gformula.get_formula ( i ).neg_cnf;
-        if ( neg_cnf.empty() ) {
+        if ( neg_cnf.empty() )
+        {
             formula_to_cnf ( p->child[0], neg_cnf, true, c );
         }
         gformula.get_formula ( i ).weight = p->child[0]->iweight;
@@ -126,29 +142,36 @@ void ParseNode::add_default()
         p = p->next;
     }
 
-    if ( child[0] || child[1] || child[2] ) {
+    if ( child[0] || child[1] || child[2] )
+    {
         gdl.defaults.push_back ( d );
     }
 }
 
 void ParseNode::formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, clause_cnf c )
 {
-    if ( !pn ) {
+    if ( !pn )
+    {
         cout << "!!error!!, never get here." << endl;
         return;
     }
 
-    if ( pn->type !=PT_FORMULA ) {
+    if ( pn->type !=PT_FORMULA )
+    {
         cout << "!!error!!, never get here." << endl;
         return;
     }
 
     //if it is an id
-    if ( ( pn->type == PT_FORMULA ) && ( pn->ival >= 0 ) ) {
+    if ( ( pn->type == PT_FORMULA ) && ( pn->ival >= 0 ) )
+    {
         //a leaf
-        if ( neg ) {
+        if ( neg )
+        {
             c.push_back ( pn->ival* ( -1 ) );    //negative atom
-        } else {
+        }
+        else
+        {
             c.push_back ( pn->ival );    //positive atom
         }
         f.push_back ( c );
@@ -158,7 +181,8 @@ void ParseNode::formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, claus
     //so it is a formula
 
     //if it is a negation operator
-    if ( pn->ival == FOR_NEGATION ) {
+    if ( pn->ival == FOR_NEGATION )
+    {
         // a negation
         formula_to_cnf ( pn->child[0], f, !neg, c );
         //      cout << "FOR_NEGATION" << endl;
@@ -167,7 +191,8 @@ void ParseNode::formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, claus
 
     //if it is a conjunction
     if ( ( !neg && ( pn->ival == FOR_CONJUNCTION ) )
-            || ( neg && ( pn->ival == FOR_DISJUNCTION ) ) ) {
+            || ( neg && ( pn->ival == FOR_DISJUNCTION ) ) )
+    {
         formula_to_cnf ( pn->child[0], f, neg, c );
         formula_to_cnf ( pn->child[1], f, neg, c );
         //      cout << "FOR_CONJUNCTION" << endl;
@@ -181,7 +206,8 @@ void ParseNode::formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, claus
     formula_to_cnf ( pn->child[0], f, neg, c );
     int s2 = f.size(); // the number of the clauses add from left child
 
-    if ( s2 - s1 == 1 ) { //could not be zero
+    if ( s2 - s1 == 1 )   //could not be zero
+    {
         c.clear();
         c.insert ( c.end(), f[s2-1].begin(), f[s2-1].end() );
         f.pop_back();
@@ -192,26 +218,153 @@ void ParseNode::formula_to_cnf ( ParseNode * pn, formula_cnf &f, bool neg, claus
     int s4 = f.size();
 
     clause_cnf cl;
-    if ( s4 - s3 == 1 ) { //could not be zero
-        if ( s2 - s1 == 1 ) {
+    if ( s4 - s3 == 1 )   //could not be zero
+    {
+        if ( s2 - s1 == 1 )
+        {
             //already finished
-        } else {
-            for ( int i = s1; i < s2; i++ ) {
+        }
+        else
+        {
+            for ( int i = s1; i < s2; i++ )
+            {
                 f[i].insert ( f[i].end(), f[s4-1].begin() +c.size(), f[s4-1].end() );
             }
             f.pop_back();
         }
-    } else {
-        if ( s2 - s1 == 1 ) {
+    }
+    else
+    {
+        if ( s2 - s1 == 1 )
+        {
             //already finished
-        } else {
+        }
+        else
+        {
             int na = gatom.get_new_atom();
-            for ( int i = s1; i < s2; i++ ) {
+            for ( int i = s1; i < s2; i++ )
+            {
                 f[i].push_back ( na );
             }
-            for ( int i = s3; i < s4; i++ ) {
+            for ( int i = s3; i < s4; i++ )
+            {
                 f[i].push_back ( -na );
             }
         }
     }
+}
+
+void ParseNode::dl_gk()
+{
+    if ( type ==PT_FORMULA )
+    {
+        cout << "know(" << formula_to_gk() << ")." << endl;
+    }
+    else if ( type == PT_DEFAULT )
+    {
+        string s1, s2, s3;
+        bool first;
+        ParseNode *p;
+
+        p = child[0];
+        first = true;
+        s1 = "";
+        while ( p )
+        {
+            if ( first )
+            {
+                s1 = s1 + p->child[0]->formula_to_gk();
+                first = false;
+            }
+            else
+            {
+                s1 = "and(" + s1;
+                s1 = s1 + ", ";
+                s1 = s1 + p->child[0]->formula_to_gk();
+                s1 = s1 + ")";
+            }
+            p = p->next;
+        }
+        if ( first )
+            s1 = "true";
+        s1 = "know(" + s1;
+	s1 = s1 + ")";
+
+        p = child[1];
+        first = true;
+        s2 = "";
+        while ( p )
+        {
+            if ( first )
+            {
+                s2 = "neg(assume(neg(";
+                s2 = s2 + p->child[0]->formula_to_gk();
+                s2 = s2+")))";
+                first = false;
+            }
+            else
+            {
+                s2 = "and(" + s2;
+                s2 = s2 + ", ";
+                s2 = s2 + "neg(assume(neg(";
+                s2 = s2 + p->child[0]->formula_to_gk();
+                s2 = s2+"))))";
+            }
+            p = p->next;
+        }
+        if ( first )
+            s2 = "true";
+
+        p = child[2];
+        s3 = "know(" + p->child[0]->formula_to_gk();
+        s3 = s3 + ")";
+
+	//cout << "s1: " << s1 << endl;
+	//cout << "s2: " << s2 << endl;
+	//cout << "s3: " << s3 << endl;
+        cout << "imply(and("
+             << s1 << "," << s2 << ")," << s3 
+             << ")."
+             << endl;
+    }
+    else
+    {
+        cout << "error, never get here!" << endl;
+    }
+}
+
+string ParseNode::formula_to_gk()
+{
+    string s = "";
+    if ( type !=PT_FORMULA )
+    {
+        cout << "!!error!!, never get here." << endl;
+    }
+    else if ( ( type == PT_FORMULA ) && ( ival >= 0 ) )
+    {
+        s = sval;
+    }
+    else if ( ival == FOR_NEGATION )
+    {
+        s = "neg(";
+        s = s + child[0]->formula_to_gk();
+        s = s + ")";
+    }
+    else if ( ival == FOR_CONJUNCTION )
+    {
+        s = "and(";
+        s = s + child[0]->formula_to_gk();
+        s = s + ", ";
+        s = s + child[1]->formula_to_gk();
+        s = s + ")";
+    }
+    else if ( ival == FOR_DISJUNCTION )
+    {
+        s = "or(";
+        s = s + child[0]->formula_to_gk();
+        s = s + ", ";
+        s = s + child[1]->formula_to_gk();
+        s = s + ")";
+    }
+    return s;
 }
